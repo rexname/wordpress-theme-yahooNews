@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-white text-slate-900;
+  }
+
+  a {
+    @apply text-inherit hover:underline;
+  }
+
+  .js-featured-panel {
+    position: relative;
+    overflow: hidden;
+    background: var(--featured-panel-bg, rgb(226 232 240));
+  }
+
+  .js-featured-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: var(--featured-image, none);
+    background-size: cover;
+    background-position: center;
+    filter: blur(18px) saturate(1.35);
+    transform: scale(1.2);
+    opacity: 0.35;
+    z-index: 0;
+  }
+
+  .js-featured-panel::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    z-index: 0;
+  }
+
+  .js-featured-panel > * {
+    position: relative;
+    z-index: 1;
+  }
+}

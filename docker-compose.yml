@@ -1,0 +1,25 @@
+services:
+  vite:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - vite_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_ALLOWED_HOSTS: ${VITE_ALLOWED_HOSTS:-.rediva.my.id,.wordpress.rediva.my.id,.trycloudflare.com}
+      VITE_HMR_HOST: ${VITE_HMR_HOST:-vite.rediva.my.id}
+      VITE_HMR_PROTOCOL: ${VITE_HMR_PROTOCOL:-wss}
+      VITE_HMR_CLIENT_PORT: ${VITE_HMR_CLIENT_PORT:-443}
+      VITE_HMR_PATH: ${VITE_HMR_PATH:-}
+    command: sh -lc "npm install && npm run dev -- --host 0.0.0.0 --port 5173 --strictPort"
+    networks:
+      - web
+
+volumes:
+  vite_node_modules:
+
+networks:
+  web:
+    external: true
