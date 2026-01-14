@@ -1,8 +1,130 @@
 import './style.css'
 
+const mobileSearchToggle = document.getElementById('mobile-search-toggle')
+const mobileSearch = document.getElementById('mobile-search')
+const mobileSearchClose = document.getElementById('mobile-search-close')
+const mobileSearchInput = document.getElementById('site-search-mobile')
+const siteBrand = document.getElementById('site-brand')
+const mobileActions = document.getElementById('mobile-actions')
+
+const mobileMenuToggle = document.getElementById('mobile-menu-toggle')
+const mobileMenu = document.getElementById('mobile-menu')
+
+if (mobileMenuToggle && mobileMenu) {
+  const openIcon = mobileMenuToggle.querySelector('[data-mobile-menu-icon="open"]')
+  const closeIcon = mobileMenuToggle.querySelector('[data-mobile-menu-icon="close"]')
+  const backdrop = mobileMenu.querySelector('#mobile-menu-backdrop')
+
+  const setOpen = (open) => {
+    mobileMenu.classList.toggle('hidden', !open)
+    mobileMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+    document.body.classList.toggle('overflow-hidden', open)
+
+    if (openIcon && closeIcon) {
+      openIcon.classList.toggle('hidden', open)
+      closeIcon.classList.toggle('hidden', !open)
+    }
+  }
+
+  setOpen(false)
+
+  mobileMenuToggle.addEventListener('click', () => {
+    const open = mobileMenuToggle.getAttribute('aria-expanded') === 'true'
+    setOpen(!open)
+  })
+
+  if (backdrop instanceof HTMLElement) {
+    backdrop.addEventListener('click', () => {
+      setOpen(false)
+    })
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return
+    if (mobileMenuToggle.getAttribute('aria-expanded') !== 'true') return
+    setOpen(false)
+  })
+
+  mobileMenu.addEventListener('click', (e) => {
+    const target = e.target
+    if (!(target instanceof Element)) return
+    if (!target.closest('a')) return
+    setOpen(false)
+  })
+}
+
+if (mobileSearchToggle && mobileSearch && mobileSearchClose && mobileSearchInput) {
+  const setSearchOpen = (open) => {
+    mobileSearchToggle.setAttribute('aria-expanded', open ? 'true' : 'false')
+
+    mobileSearch.classList.toggle('pointer-events-none', !open)
+    mobileSearch.classList.toggle('opacity-0', !open)
+    mobileSearch.classList.toggle('opacity-100', open)
+    mobileSearch.classList.toggle('[transform:scaleX(0.92)]', !open)
+    mobileSearch.classList.toggle('[transform:scaleX(1)]', open)
+
+    if (siteBrand) {
+      siteBrand.classList.toggle('pointer-events-none', open)
+      siteBrand.classList.toggle('opacity-0', open)
+    }
+
+    if (mobileActions) {
+      mobileActions.classList.toggle('pointer-events-none', open)
+      mobileActions.classList.toggle('opacity-0', open)
+    }
+
+    if (mobileMenuToggle && mobileMenu) {
+      mobileMenu.classList.add('hidden')
+      mobileMenuToggle.setAttribute('aria-expanded', 'false')
+      document.body.classList.remove('overflow-hidden')
+
+      const openIcon = mobileMenuToggle.querySelector('[data-mobile-menu-icon="open"]')
+      const closeIcon = mobileMenuToggle.querySelector('[data-mobile-menu-icon="close"]')
+      if (openIcon && closeIcon) {
+        openIcon.classList.remove('hidden')
+        closeIcon.classList.add('hidden')
+      }
+    }
+
+    if (open) {
+      mobileSearchInput.focus()
+      mobileSearchInput.select()
+    } else {
+      mobileSearchToggle.focus()
+    }
+  }
+
+  setSearchOpen(false)
+
+  mobileSearchToggle.addEventListener('click', () => {
+    const open = mobileSearchToggle.getAttribute('aria-expanded') === 'true'
+    setSearchOpen(!open)
+  })
+
+  mobileSearchClose.addEventListener('click', () => {
+    setSearchOpen(false)
+  })
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return
+    if (mobileSearchToggle.getAttribute('aria-expanded') !== 'true') return
+    setSearchOpen(false)
+  })
+
+  document.addEventListener('click', (e) => {
+    if (mobileSearchToggle.getAttribute('aria-expanded') !== 'true') return
+    const target = e.target
+    if (!(target instanceof Node)) return
+    if (mobileSearch.contains(target) || mobileSearchToggle.contains(target)) return
+    setSearchOpen(false)
+  })
+}
+
 const trendBar = document.getElementById('trend-bar')
 
 if (trendBar) {
+  const isDesktop = () => window.matchMedia('(min-width: 768px)').matches
+
   let lastY = window.scrollY
   let ticking = false
   let hidden = false
@@ -10,20 +132,30 @@ if (trendBar) {
   const show = () => {
     if (!hidden) return
     hidden = false
-    trendBar.classList.remove('h-0', 'opacity-0', 'pointer-events-none')
-    trendBar.classList.add('h-10', 'opacity-100')
+    trendBar.classList.remove('md:h-0', 'opacity-0', 'pointer-events-none')
+    trendBar.classList.add('md:h-10', 'opacity-100')
   }
 
   const hide = () => {
     if (hidden) return
     hidden = true
-    trendBar.classList.remove('h-10', 'opacity-100')
-    trendBar.classList.add('h-0', 'opacity-0', 'pointer-events-none')
+    trendBar.classList.remove('md:h-10', 'opacity-100')
+    trendBar.classList.add('md:h-0', 'opacity-0', 'pointer-events-none')
   }
 
-  trendBar.classList.add('h-10', 'opacity-100')
+  trendBar.classList.add('opacity-100')
+  trendBar.classList.add('md:h-10')
 
   const onScroll = () => {
+    if (!isDesktop()) {
+      if (hidden) {
+        hidden = false
+        trendBar.classList.remove('md:h-0', 'opacity-0', 'pointer-events-none')
+        trendBar.classList.add('md:h-10', 'opacity-100')
+      }
+      return
+    }
+
     const y = window.scrollY
     const delta = y - lastY
     lastY = y

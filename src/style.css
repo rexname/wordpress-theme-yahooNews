@@ -9,6 +9,10 @@
     @apply text-inherit hover:underline;
   }
 
+  #trend-bar nav a {
+    @apply inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 no-underline hover:bg-slate-50 hover:no-underline;
+  }
+
   .js-featured-panel {
     position: relative;
     overflow: hidden;
