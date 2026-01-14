@@ -213,9 +213,9 @@ function yahooNews_rest_stories(WP_REST_Request $request): WP_REST_Response
             <article <?php post_class('group grid gap-4 md:grid-cols-[176px_1fr]'); ?> data-story-ts="<?php echo esc_attr((string) $ts); ?>">
               <a class="block overflow-hidden rounded-xl bg-slate-100" href="<?php the_permalink(); ?>">
                 <?php if (has_post_thumbnail()) : ?>
-                  <?php the_post_thumbnail('medium_large', ['class' => 'h-28 w-full object-cover md:h-24']); ?>
+                  <?php the_post_thumbnail('medium_large', ['class' => 'h-56 w-full object-cover sm:h-60 md:h-24']); ?>
                 <?php else : ?>
-                  <div class="h-28 w-full bg-slate-100 md:h-24"></div>
+                  <div class="h-56 w-full bg-slate-100 sm:h-60 md:h-24"></div>
                 <?php endif; ?>
               </a>
 
@@ -274,3 +274,95 @@ function yahooNews_register_rest_routes(): void
 }
 
 add_action('rest_api_init', 'yahooNews_register_rest_routes');
+
+add_action('customize_register', 'yahooNews_customize_social');
+
+function yahooNews_customize_social(WP_Customize_Manager $wp_customize): void
+{
+    $wp_customize->add_section('yahoonews_social', [
+        'title' => __('Social Links', 'yahoonews'),
+        'priority' => 160,
+    ]);
+
+    $networks = [
+        'x' => 'X',
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'youtube' => 'YouTube',
+        'tiktok' => 'TikTok',
+    ];
+
+    foreach ($networks as $key => $label) {
+        $setting = 'yahoonews_social_' . $key;
+        $wp_customize->add_setting($setting, [
+            'default' => '',
+            'sanitize_callback' => 'esc_url_raw',
+            'transport' => 'refresh',
+        ]);
+
+        $wp_customize->add_control($setting, [
+            'label' => sprintf(__('Link %s', 'yahoonews'), $label),
+            'section' => 'yahoonews_social',
+            'type' => 'url',
+        ]);
+    }
+}
+
+function yahooNews_social_links_data(): array
+{
+    $items = [];
+    $map = [
+        'x' => 'X',
+        'facebook' => 'Facebook',
+        'instagram' => 'Instagram',
+        'youtube' => 'YouTube',
+        'tiktok' => 'TikTok',
+    ];
+
+    foreach ($map as $key => $label) {
+        $url = get_theme_mod('yahoonews_social_' . $key, '');
+        if (is_string($url) && $url !== '') {
+            $items[] = [
+                'key' => $key,
+                'label' => $label,
+                'url' => $url,
+            ];
+        }
+    }
+
+    return $items;
+}
+
+function yahooNews_social_icon_svg(string $key): string
+{
+    switch ($key) {
+        case 'x':
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6 6 18" /></svg>';
+        case 'facebook':
+            return '<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M13.5 22v-8h2.7l.4-3H13.5V9.1c0-.9.2-1.5 1.5-1.5h1.7V5c-.3 0-1.4-.1-2.7-.1-2.7 0-4.6 1.7-4.6 4.8V11H7v3h2.4v8h4.1Z" /></svg>';
+        case 'instagram':
+            return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-4 w-4"><path stroke-linecap="round" stroke-linejoin="round" d="M16 3H8a5 5 0 0 0-5 5v8a5 5 0 0 0 5 5h8a5 5 0 0 0 5-5V8a5 5 0 0 0-5-5Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M17.5 6.5h.01" /></svg>';
+        case 'youtube':
+            return '<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M21.6 7.2a3 3 0 0 0-2.1-2.1C17.8 4.6 12 4.6 12 4.6s-5.8 0-7.5.5A3 3 0 0 0 2.4 7.2 31.7 31.7 0 0 0 2 12a31.7 31.7 0 0 0 .4 4.8 3 3 0 0 0 2.1 2.1c1.7.5 7.5.5 7.5.5s5.8 0 7.5-.5a3 3 0 0 0 2.1-2.1A31.7 31.7 0 0 0 22 12a31.7 31.7 0 0 0-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z" /></svg>';
+        case 'tiktok':
+            return '<svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M15 3c.3 2.3 1.7 4.2 4 4.6V11c-1.7 0-3.2-.6-4.3-1.5v6.1c0 3.1-2.5 5.4-5.6 5.4S3.6 18.7 3.6 15.6 6 10.2 9.1 10.2c.4 0 .8 0 1.2.1v3.2c-.3-.1-.6-.2-1-.2-1.3 0-2.3 1-2.3 2.3s1 2.3 2.3 2.3c1.6 0 2.6-1 2.6-3V3h3.1Z" /></svg>';
+        default:
+            return '';
+    }
+}
+
+function yahooNews_render_social_links(string $classRow = ''): void
+{
+    $items = yahooNews_social_links_data();
+    if ($items === []) {
+        return;
+    }
+
+    echo '<div class="flex items-center ' . esc_attr($classRow) . ' gap-4 text-slate-700">';
+    foreach ($items as $item) {
+        $svg = yahooNews_social_icon_svg($item['key']);
+        if ($svg === '') continue;
+        echo '<a class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white no-underline transition-colors hover:bg-slate-50 hover:no-underline" href="' . esc_url($item['url']) . '" aria-label="' . esc_attr($item['label']) . '">' . $svg . '</a>';
+    }
+    echo '</div>';
+}
