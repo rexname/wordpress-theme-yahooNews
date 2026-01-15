@@ -193,6 +193,13 @@ function yahooNews_rest_stories(WP_REST_Request $request): WP_REST_Response
     $categoryId = is_numeric($categoryRaw) ? (int) $categoryRaw : 0;
     $categoryId = max(0, $categoryId);
 
+    $searchRaw = $request->get_param('search');
+    $search = is_string($searchRaw) ? trim(sanitize_text_field($searchRaw)) : '';
+
+    $tagRaw = $request->get_param('tag');
+    $tagId = is_numeric($tagRaw) ? (int) $tagRaw : 0;
+    $tagId = max(0, $tagId);
+
     $queryArgs = [
         'post_type' => 'post',
         'posts_per_page' => $limit,
@@ -204,6 +211,14 @@ function yahooNews_rest_stories(WP_REST_Request $request): WP_REST_Response
 
     if ($categoryId > 0) {
         $queryArgs['cat'] = $categoryId;
+    }
+
+    if ($search !== '') {
+        $queryArgs['s'] = $search;
+    }
+
+    if ($tagId > 0) {
+        $queryArgs['tag_id'] = $tagId;
     }
 
     $q = new WP_Query($queryArgs);
@@ -280,6 +295,12 @@ function yahooNews_register_rest_routes(): void
                 'required' => false,
             ],
             'category' => [
+                'required' => false,
+            ],
+            'search' => [
+                'required' => false,
+            ],
+            'tag' => [
                 'required' => false,
             ],
         ],
@@ -382,6 +403,11 @@ function yahooNews_render_social_links(string $classRow = ''): void
 
 function yahooNews_render_footer_links(string $classSocial = '', string $classLinks = '', string $classCopyright = ''): void
 {
+    $brandLabel = get_bloginfo('name');
+    if (!is_string($brandLabel) || $brandLabel === '') {
+        $brandLabel = 'Brand';
+    }
+
     echo '<div class="rounded-xl border border-slate-200 bg-white p-4">';
     yahooNews_render_social_links($classSocial);
     echo '<div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-600 ' . esc_attr($classLinks) . '">';
@@ -394,6 +420,6 @@ function yahooNews_render_footer_links(string $classSocial = '', string $classLi
     echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Feedback</a>';
     echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Products and Services</a>';
     echo '</div>';
-    echo '<p class="mt-4 text-xs text-slate-500 ' . esc_attr($classCopyright) . '">&copy; ' . esc_html((string) wp_date('Y')) . ' Yahoo. All rights reserved.</p>';
+    echo '<p class="mt-4 text-xs text-slate-500 ' . esc_attr($classCopyright) . '">&copy; ' . esc_html((string) wp_date('Y')) . ' ' . esc_html($brandLabel) . '. All rights reserved.</p>';
     echo '</div>';
 }

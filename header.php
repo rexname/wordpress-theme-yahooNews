@@ -90,31 +90,51 @@
                 'orderby' => 'count',
                 'order' => 'DESC',
                 'hide_empty' => true,
-                'number' => 6,
+                'number' => 20,
             ]);
 
             if (is_array($navCategories) && $navCategories !== []) {
-                echo '<ul class="flex items-center gap-6">';
+                $navItems = [];
                 foreach ($navCategories as $cat) {
-                    if (!$cat instanceof WP_Term) {
-                        continue;
-                    }
+                    if (!$cat instanceof WP_Term) continue;
 
                     $link = get_category_link($cat);
-                    if (!is_string($link) || $link === '') {
-                        continue;
-                    }
+                    if (!is_string($link) || $link === '') continue;
 
-                    echo '<li><a class="rounded-full px-3 py-2 font-semibold text-slate-700 no-underline transition-colors hover:bg-slate-100 hover:text-slate-900 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" href="' . esc_url($link) . '">' . esc_html($cat->name) . '</a></li>';
+                    $navItems[] = [
+                        'name' => $cat->name,
+                        'url' => $link,
+                    ];
                 }
+
+                $primaryItems = array_slice($navItems, 0, 4);
+                $moreItems = array_slice($navItems, 4);
+
+                echo '<ul class="flex items-center gap-6">';
+                foreach ($primaryItems as $item) {
+                    echo '<li><a class="rounded-full px-3 py-2 font-semibold text-slate-700 no-underline transition-colors hover:bg-slate-100 hover:text-slate-900 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . '</a></li>';
+                }
+
+                if ($moreItems !== []) {
+                    echo '<li class="relative group">';
+                    echo '<button class="rounded-full px-3 py-2 font-semibold text-slate-700 no-underline transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" type="button" aria-haspopup="true">More</button>';
+                    echo '<div class="absolute left-0 top-full z-[60] hidden w-60 pt-2 group-hover:block group-focus-within:block">';
+                    echo '<div class="rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">';
+                    echo '<ul class="flex flex-col">';
+                    foreach ($moreItems as $item) {
+                        echo '<li><a class="block rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 no-underline hover:bg-slate-50 hover:text-slate-900 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . '</a></li>';
+                    }
+                    echo '</ul>';
+                    echo '</div>';
+                    echo '</div>';
+                    echo '</li>';
+                }
+
                 echo '</ul>';
             }
             ?>
           </nav>
 
-          <div class="hidden items-center gap-3 md:flex">
-            <a class="rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 no-underline transition-colors hover:bg-slate-50 hover:text-slate-900 hover:no-underline" href="#">Sign in</a>
-          </div>
         </div>
 
         <div id="mobile-menu" class="fixed inset-x-0 top-14 bottom-0 z-[70] hidden md:hidden" role="dialog" aria-modal="true" aria-label="Mobile menu">
@@ -151,29 +171,35 @@
                 }
                 ?>
                 </nav>
-
-                <div class="mt-4">
-                  <a class="inline-flex rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-700 no-underline transition-colors hover:bg-slate-50 hover:text-slate-900 hover:no-underline" href="#">Sign in</a>
-                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div id="trend-bar" class="flex flex-col gap-2 border-t border-slate-100 bg-white text-xs text-slate-600 transition-[height,opacity] duration-200 md:flex-row md:items-center md:gap-4">
-          <span class="pt-2 font-semibold text-slate-700 md:pt-0">Today's news</span>
-          <nav class="min-w-0 flex-1 pb-2 md:pb-0" aria-label="Trending">
+        <div id="trend-bar" class="flex w-full flex-col gap-2 overflow-hidden border-t border-slate-100 bg-white py-2 text-[11px] text-slate-600 transition-[max-height,opacity] duration-200 ease-out sm:text-xs md:flex-row md:items-center md:gap-4 md:text-sm md:duration-300 md:ease-in-out">
+          <span class="font-semibold text-slate-700">Today's news</span>
+          <nav class="min-w-0 flex-1" aria-label="Trending">
             <?php
-            if (has_nav_menu('trending')) {
-                wp_nav_menu([
-                    'theme_location' => 'trending',
-                    'container' => false,
-                    'fallback_cb' => false,
-                    'depth' => 1,
-                    'menu_class' => 'flex flex-wrap items-center gap-x-4 gap-y-2',
-                ]);
-            } else {
-                echo '<ul class="flex flex-wrap items-center gap-x-4 gap-y-2"><li><a href="#">US</a></li><li><a href="#">Politics</a></li><li><a href="#">World</a></li><li><a href="#">COVID-19</a></li><li><a href="#">Climate Change</a></li><li><a href="#">Health</a></li><li><a href="#">Science</a></li><li><a href="#">Yahoo Originals</a></li><li><a href="#">Contact Us</a></li></ul>';
+            $trendTags = get_tags([
+                'orderby' => 'count',
+                'order' => 'DESC',
+                'hide_empty' => true,
+                'number' => 12,
+            ]);
+
+            if (is_array($trendTags) && $trendTags !== []) {
+                echo '<ul class="flex flex-wrap items-center gap-x-4 gap-y-2">';
+                foreach ($trendTags as $tag) {
+                    if (!$tag instanceof WP_Term) {
+                        continue;
+                    }
+                    $link = get_term_link($tag);
+                    if (!is_string($link) || $link === '') {
+                        continue;
+                    }
+                    echo '<li><a href="' . esc_url($link) . '">' . esc_html($tag->name) . '</a></li>';
+                }
+                echo '</ul>';
             }
             ?>
           </nav>

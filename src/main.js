@@ -123,53 +123,91 @@ if (mobileSearchToggle && mobileSearch && mobileSearchClose && mobileSearchInput
 const trendBar = document.getElementById('trend-bar')
 
 if (trendBar) {
-  const isDesktop = () => window.matchMedia('(min-width: 768px)').matches
-
   let lastY = window.scrollY
   let ticking = false
   let hidden = false
+  let accumulatedDelta = 0
+  let lastToggleAt = 0
+  let expandResetTimer = 0
+  let expandResetListener = null
+
+  const clearExpandResetListener = () => {
+    if (!expandResetListener) return
+    trendBar.removeEventListener('transitionend', expandResetListener)
+    expandResetListener = null
+  }
 
   const show = () => {
     if (!hidden) return
     hidden = false
-    trendBar.classList.remove('md:h-0', 'opacity-0', 'pointer-events-none')
-    trendBar.classList.add('md:h-10', 'opacity-100')
+    trendBar.classList.remove('pointer-events-none')
+    trendBar.style.opacity = '1'
+    trendBar.style.maxHeight = `${trendBar.scrollHeight}px`
+    window.clearTimeout(expandResetTimer)
+    clearExpandResetListener()
+    expandResetListener = (e) => {
+      if (!(e instanceof TransitionEvent)) return
+      if (e.propertyName !== 'max-height') return
+      if (hidden) return
+      clearExpandResetListener()
+      trendBar.style.maxHeight = 'none'
+    }
+    trendBar.addEventListener('transitionend', expandResetListener)
+    expandResetTimer = window.setTimeout(() => {
+      if (hidden) return
+      clearExpandResetListener()
+      trendBar.style.maxHeight = 'none'
+    }, 600)
+    accumulatedDelta = 0
+    lastToggleAt = performance.now()
   }
 
   const hide = () => {
     if (hidden) return
     hidden = true
-    trendBar.classList.remove('md:h-10', 'opacity-100')
-    trendBar.classList.add('md:h-0', 'opacity-0', 'pointer-events-none')
+    window.clearTimeout(expandResetTimer)
+    clearExpandResetListener()
+    if (trendBar.style.maxHeight === 'none' || trendBar.style.maxHeight === '') {
+      trendBar.style.maxHeight = `${trendBar.scrollHeight}px`
+    }
+    trendBar.offsetHeight
+    trendBar.classList.add('pointer-events-none')
+    trendBar.style.opacity = '0'
+    trendBar.style.maxHeight = '0px'
+    accumulatedDelta = 0
+    lastToggleAt = performance.now()
   }
 
-  trendBar.classList.add('opacity-100')
-  trendBar.classList.add('md:h-10')
+  trendBar.style.opacity = '1'
+  trendBar.style.maxHeight = 'none'
 
   const onScroll = () => {
-    if (!isDesktop()) {
-      if (hidden) {
-        hidden = false
-        trendBar.classList.remove('md:h-0', 'opacity-0', 'pointer-events-none')
-        trendBar.classList.add('md:h-10', 'opacity-100')
-      }
-      return
-    }
-
     const y = window.scrollY
     const delta = y - lastY
     lastY = y
+
+    const now = performance.now()
+    if (now - lastToggleAt < 180) return
 
     if (y < 20) {
       show()
       return
     }
 
-    if (Math.abs(delta) < 8) return
+    if (Math.abs(delta) < 2) return
 
     if (delta > 0) {
-      hide()
+      accumulatedDelta = Math.max(0, accumulatedDelta) + delta
     } else {
+      accumulatedDelta = Math.min(0, accumulatedDelta) + delta
+    }
+
+    if (accumulatedDelta > 30) {
+      hide()
+      return
+    }
+
+    if (accumulatedDelta < -30) {
       show()
     }
   }
@@ -277,6 +315,8 @@ if (storiesList && storiesSentinel) {
   let loading = false
   let done = false
   const categoryId = storiesList instanceof HTMLElement ? storiesList.dataset.categoryId : undefined
+  const searchQuery = storiesList instanceof HTMLElement ? storiesList.dataset.searchQuery : undefined
+  const tagId = storiesList instanceof HTMLElement ? storiesList.dataset.tagId : undefined
   const nextOffsetAttr =
     storiesList instanceof HTMLElement ? Number.parseInt(storiesList.dataset.nextOffset ?? '', 10) : Number.NaN
   let offset = Number.isFinite(nextOffsetAttr) ? nextOffsetAttr : 1 + storiesList.querySelectorAll('article').length
@@ -299,6 +339,12 @@ if (storiesList && storiesSentinel) {
       })
       if (typeof categoryId === 'string' && categoryId !== '') {
         qs.set('category', categoryId)
+      }
+      if (typeof searchQuery === 'string' && searchQuery !== '') {
+        qs.set('search', searchQuery)
+      }
+      if (typeof tagId === 'string' && tagId !== '') {
+        qs.set('tag', tagId)
       }
       const url = `/wp-json/yahoonews/v1/stories?${qs.toString()}`
       const res = await fetch(url, { headers: { Accept: 'application/json' } })
@@ -451,20 +497,6 @@ if (readAction instanceof HTMLButtonElement && readActionProgress instanceof SVG
     }
 
     const homeUrl = readAction.dataset.homeUrl
-    const ref = document.referrer
-
-    if (typeof ref === 'string' && ref !== '') {
-      try {
-        const refUrl = new URL(ref)
-        if (refUrl.origin === window.location.origin) {
-          window.location.href = ref
-          return
-        }
-      } catch {
-        // ignore
-      }
-    }
-
     if (typeof homeUrl === 'string' && homeUrl !== '') {
       window.location.href = homeUrl
       return
