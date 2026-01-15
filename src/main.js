@@ -130,6 +130,29 @@ if (trendBar) {
   let lastToggleAt = 0
   let expandResetTimer = 0
   let expandResetListener = null
+  let resizeObserver = null
+
+  const media = window.matchMedia('(min-width: 768px)')
+
+  const getConfig = () => {
+    if (media.matches) {
+      return {
+        toggleCooldownMs: 200,
+        topLockPx: 80,
+        minDeltaPx: 4,
+        hideThresholdPx: 160,
+        showThresholdPx: -70,
+      }
+    }
+
+    return {
+      toggleCooldownMs: 180,
+      topLockPx: 20,
+      minDeltaPx: 2,
+      hideThresholdPx: 30,
+      showThresholdPx: -30,
+    }
+  }
 
   const clearExpandResetListener = () => {
     if (!expandResetListener) return
@@ -137,8 +160,22 @@ if (trendBar) {
     expandResetListener = null
   }
 
+  const ensureResizeObserver = () => {
+    if (resizeObserver) return
+    if (typeof ResizeObserver !== 'function') return
+
+    resizeObserver = new ResizeObserver(() => {
+      if (hidden) return
+      const maxHeight = trendBar.style.maxHeight
+      if (maxHeight === 'none' || maxHeight === '') return
+      trendBar.style.maxHeight = `${trendBar.scrollHeight}px`
+    })
+    resizeObserver.observe(trendBar)
+  }
+
   const show = () => {
     if (!hidden) return
+    ensureResizeObserver()
     hidden = false
     trendBar.classList.remove('pointer-events-none')
     trendBar.style.opacity = '1'
@@ -158,6 +195,14 @@ if (trendBar) {
       clearExpandResetListener()
       trendBar.style.maxHeight = 'none'
     }, 600)
+
+    window.requestAnimationFrame(() => {
+      if (hidden) return
+      const maxHeight = trendBar.style.maxHeight
+      if (maxHeight === 'none' || maxHeight === '') return
+      trendBar.style.maxHeight = `${trendBar.scrollHeight}px`
+    })
+
     accumulatedDelta = 0
     lastToggleAt = performance.now()
   }
@@ -181,20 +226,33 @@ if (trendBar) {
   trendBar.style.opacity = '1'
   trendBar.style.maxHeight = 'none'
 
+  const reset = () => {
+    hidden = false
+    window.clearTimeout(expandResetTimer)
+    clearExpandResetListener()
+    trendBar.classList.remove('pointer-events-none')
+    trendBar.style.opacity = '1'
+    trendBar.style.maxHeight = 'none'
+    accumulatedDelta = 0
+    lastToggleAt = performance.now()
+  }
+
   const onScroll = () => {
     const y = window.scrollY
     const delta = y - lastY
     lastY = y
 
-    const now = performance.now()
-    if (now - lastToggleAt < 180) return
+    const config = getConfig()
 
-    if (y < 20) {
+    const now = performance.now()
+    if (now - lastToggleAt < config.toggleCooldownMs) return
+
+    if (y < config.topLockPx) {
       show()
       return
     }
 
-    if (Math.abs(delta) < 2) return
+    if (Math.abs(delta) < config.minDeltaPx) return
 
     if (delta > 0) {
       accumulatedDelta = Math.max(0, accumulatedDelta) + delta
@@ -202,28 +260,32 @@ if (trendBar) {
       accumulatedDelta = Math.min(0, accumulatedDelta) + delta
     }
 
-    if (accumulatedDelta > 30) {
+    if (accumulatedDelta > config.hideThresholdPx) {
       hide()
       return
     }
 
-    if (accumulatedDelta < -30) {
+    if (accumulatedDelta < config.showThresholdPx) {
       show()
     }
   }
 
-  window.addEventListener(
-    'scroll',
-    () => {
-      if (ticking) return
-      ticking = true
-      window.requestAnimationFrame(() => {
-        onScroll()
-        ticking = false
-      })
-    },
-    { passive: true }
-  )
+  const onScrollRaf = () => {
+    if (ticking) return
+    ticking = true
+    window.requestAnimationFrame(() => {
+      onScroll()
+      ticking = false
+    })
+  }
+
+  reset()
+  window.addEventListener('scroll', onScrollRaf, { passive: true })
+  if (typeof media.addEventListener === 'function') {
+    media.addEventListener('change', reset)
+  } else if (typeof media.addListener === 'function') {
+    media.addListener(reset)
+  }
 }
 
 const featuredImg = document.querySelector('.js-featured-image')

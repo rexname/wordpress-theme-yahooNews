@@ -176,7 +176,7 @@
           </div>
         </div>
 
-        <div id="trend-bar" class="flex w-full flex-col gap-2 overflow-hidden border-t border-slate-100 bg-white py-2 text-[11px] text-slate-600 transition-[max-height,opacity] duration-200 ease-out sm:text-xs md:flex-row md:items-center md:gap-4 md:text-sm md:duration-300 md:ease-in-out">
+        <div id="trend-bar" class="flex w-full flex-col gap-2 overflow-hidden border-t border-slate-100 bg-white py-2 text-[11px] text-slate-600 transition-[max-height,opacity] duration-200 ease-out sm:text-xs md:flex-row md:items-center md:gap-4 md:text-sm md:duration-200 md:ease-out">
           <span class="font-semibold text-slate-700">Today's news</span>
           <nav class="min-w-0 flex-1" aria-label="Trending">
             <?php
