@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <?php wp_head(); ?>
   </head>
-  <body <?php body_class(); ?>>
+  <body <?php body_class('min-h-screen flex flex-col'); ?>>
     <?php wp_body_open(); ?>
 
     <a class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-xl focus:border focus:border-slate-200 focus:bg-white focus:px-3 focus:py-2" href="#content">Skip to content</a>
@@ -181,4 +181,4 @@
       </div>
     </header>
 
-    <div id="content" class="site-content">
+    <div id="content" class="site-content flex-1">

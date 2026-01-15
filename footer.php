@@ -1,12 +1,10 @@
     </div>
 
-    <?php if (!is_home() && !is_front_page()) : ?>
-      <footer class="site-footer" role="contentinfo">
-        <div class="site-footer__inner">
-          <p>&copy; <?php echo esc_html((string) wp_date('Y')); ?> <?php bloginfo('name'); ?></p>
-        </div>
-      </footer>
-    <?php endif; ?>
+    <footer class="border-t border-slate-200 bg-slate-50 lg:hidden" role="contentinfo">
+      <div class="mx-auto max-w-6xl px-4 py-8">
+        <?php yahooNews_render_footer_links('justify-center', 'justify-center', 'text-center'); ?>
+      </div>
+    </footer>
 
     <?php wp_footer(); ?>
   </body>

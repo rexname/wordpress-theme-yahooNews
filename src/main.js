@@ -276,7 +276,10 @@ const storiesLoading = document.getElementById('stories-loading')
 if (storiesList && storiesSentinel) {
   let loading = false
   let done = false
-  let offset = 1 + storiesList.querySelectorAll('article').length
+  const categoryId = storiesList instanceof HTMLElement ? storiesList.dataset.categoryId : undefined
+  const nextOffsetAttr =
+    storiesList instanceof HTMLElement ? Number.parseInt(storiesList.dataset.nextOffset ?? '', 10) : Number.NaN
+  let offset = Number.isFinite(nextOffsetAttr) ? nextOffsetAttr : 1 + storiesList.querySelectorAll('article').length
 
   const setLoading = (isLoading) => {
     if (!storiesLoading) return
@@ -290,7 +293,14 @@ if (storiesList && storiesSentinel) {
     setLoading(true)
 
     try {
-      const url = `/wp-json/yahoonews/v1/stories?offset=${encodeURIComponent(offset)}&limit=5`
+      const qs = new URLSearchParams({
+        offset: String(offset),
+        limit: '5'
+      })
+      if (typeof categoryId === 'string' && categoryId !== '') {
+        qs.set('category', categoryId)
+      }
+      const url = `/wp-json/yahoonews/v1/stories?${qs.toString()}`
       const res = await fetch(url, { headers: { Accept: 'application/json' } })
       if (!res.ok) {
         done = true
@@ -310,6 +320,7 @@ if (storiesList && storiesSentinel) {
       }
 
       offset = typeof data?.nextOffset === 'number' ? data.nextOffset : offset + items.length
+      if (storiesList instanceof HTMLElement) storiesList.dataset.nextOffset = String(offset)
       if (data?.hasMore === false) done = true
     } finally {
       loading = false
@@ -340,4 +351,127 @@ if (storiesList && storiesSentinel) {
   io.observe(storiesSentinel)
 
   loadUntilSettled()
+}
+
+const readAction = document.getElementById('read-action')
+const readActionProgress = document.getElementById('read-action-progress')
+const readActionIconClose = document.getElementById('read-action-icon-close')
+const readActionIconUp = document.getElementById('read-action-icon-up')
+
+const topStoriesScroll = document.getElementById('top-stories-scroll')
+const topStoriesPrev = document.getElementById('top-stories-prev')
+const topStoriesNext = document.getElementById('top-stories-next')
+
+if (topStoriesScroll instanceof HTMLElement && topStoriesPrev instanceof HTMLButtonElement && topStoriesNext instanceof HTMLButtonElement) {
+  let ticking = false
+
+  const atEnd = () => topStoriesScroll.scrollLeft + topStoriesScroll.clientWidth >= topStoriesScroll.scrollWidth - 8
+  const atStart = () => topStoriesScroll.scrollLeft <= 8
+  const canScroll = () => topStoriesScroll.scrollWidth > topStoriesScroll.clientWidth + 8
+
+  const update = () => {
+    const enabled = canScroll()
+
+    topStoriesPrev.classList.toggle('hidden', atStart())
+    topStoriesPrev.disabled = !enabled
+    topStoriesPrev.classList.toggle('opacity-30', !enabled)
+    topStoriesPrev.classList.toggle('cursor-not-allowed', !enabled)
+
+    topStoriesNext.disabled = !enabled
+    topStoriesNext.classList.toggle('opacity-30', !enabled)
+    topStoriesNext.classList.toggle('cursor-not-allowed', !enabled)
+  }
+
+  const onScrollOrResize = () => {
+    if (ticking) return
+    ticking = true
+    window.requestAnimationFrame(() => {
+      update()
+      ticking = false
+    })
+  }
+
+  topStoriesNext.addEventListener('click', () => {
+    if (!canScroll()) return
+
+    if (atEnd()) {
+      topStoriesScroll.scrollTo({ left: 0, behavior: 'smooth' })
+      return
+    }
+
+    const step = Math.max(220, Math.round(topStoriesScroll.clientWidth * 0.7))
+    topStoriesScroll.scrollBy({ left: step, behavior: 'smooth' })
+  })
+
+  topStoriesPrev.addEventListener('click', () => {
+    if (!canScroll()) return
+
+    const step = Math.max(220, Math.round(topStoriesScroll.clientWidth * 0.7))
+    topStoriesScroll.scrollBy({ left: -step, behavior: 'smooth' })
+  })
+
+  topStoriesScroll.addEventListener('scroll', onScrollOrResize, { passive: true })
+  window.addEventListener('resize', onScrollOrResize)
+  update()
+}
+
+if (readAction instanceof HTMLButtonElement && readActionProgress instanceof SVGPathElement) {
+  let ticking = false
+  let showUp = false
+
+  const setMode = (up) => {
+    showUp = up
+    if (readActionIconClose instanceof SVGElement) readActionIconClose.classList.toggle('hidden', up)
+    if (readActionIconUp instanceof SVGElement) readActionIconUp.classList.toggle('hidden', !up)
+    readAction.setAttribute('aria-label', up ? 'Back to top' : 'Close')
+  }
+
+  const update = () => {
+    const doc = document.documentElement
+    const scrollTop = window.scrollY || doc.scrollTop || 0
+    const max = Math.max(1, doc.scrollHeight - window.innerHeight)
+    const p = Math.max(0, Math.min(1, scrollTop / max))
+    readActionProgress.setAttribute('stroke-dasharray', `${p * 100} 100`)
+    setMode(scrollTop > 160)
+  }
+
+  const onScroll = () => {
+    if (ticking) return
+    ticking = true
+    window.requestAnimationFrame(() => {
+      update()
+      ticking = false
+    })
+  }
+
+  readAction.addEventListener('click', () => {
+    if (showUp) {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    const homeUrl = readAction.dataset.homeUrl
+    const ref = document.referrer
+
+    if (typeof ref === 'string' && ref !== '') {
+      try {
+        const refUrl = new URL(ref)
+        if (refUrl.origin === window.location.origin) {
+          window.location.href = ref
+          return
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (typeof homeUrl === 'string' && homeUrl !== '') {
+      window.location.href = homeUrl
+      return
+    }
+  })
+
+  window.addEventListener('scroll', onScroll, { passive: true })
+  window.addEventListener('resize', onScroll)
+  update()
 }
