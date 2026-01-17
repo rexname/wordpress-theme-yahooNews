@@ -3,8 +3,6 @@ node_modules/
 .env
 .env.*
 
-dist/.vite/
-dist/assets/*.map
 
 .DS_Store
 
