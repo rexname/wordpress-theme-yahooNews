@@ -107,6 +107,68 @@ function yahooNews_post_read_time_minutes(int $postId = 0): int
     return max(1, $minutes);
 }
 
+function yahooNews_post_increment_views(int $postId): void
+{
+    $postId = max(0, $postId);
+    if ($postId === 0) {
+        return;
+    }
+
+    $totalRaw = get_post_meta($postId, 'yahoonews_views_total', true);
+    $total = is_numeric($totalRaw) ? (int) $totalRaw : 0;
+    update_post_meta($postId, 'yahoonews_views_total', $total + 1);
+
+    $dailyRaw = get_post_meta($postId, 'yahoonews_views_daily', true);
+    $daily = is_array($dailyRaw) ? $dailyRaw : [];
+
+    $today = wp_date('Ymd');
+    $daily[$today] = isset($daily[$today]) && is_numeric($daily[$today]) ? ((int) $daily[$today]) + 1 : 1;
+
+    $minDate = wp_date('Ymd', strtotime('-6 days'));
+    foreach ($daily as $day => $count) {
+        if (!is_string($day) || strlen($day) !== 8 || $day < $minDate) {
+            unset($daily[$day]);
+            continue;
+        }
+
+        if (!is_numeric($count)) {
+            $daily[$day] = 0;
+        }
+    }
+
+    $views7 = 0;
+    foreach ($daily as $count) {
+        $views7 += is_numeric($count) ? (int) $count : 0;
+    }
+
+    update_post_meta($postId, 'yahoonews_views_daily', $daily);
+    update_post_meta($postId, 'yahoonews_views_7d', $views7);
+}
+
+function yahooNews_track_post_view(): void
+{
+    if (is_admin()) {
+        return;
+    }
+
+    if (!is_singular('post')) {
+        return;
+    }
+
+    if (function_exists('is_preview') && is_preview()) {
+        return;
+    }
+
+    $postId = (int) get_queried_object_id();
+    if ($postId <= 0) {
+        return;
+    }
+
+    yahooNews_post_increment_views($postId);
+}
+
+add_action('wp', 'yahooNews_track_post_view');
+
 function yahooNews_vite_enqueue_assets(): void
 {
     $devServer = yahooNews_vite_dev_server_url();

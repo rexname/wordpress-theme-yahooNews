@@ -13,7 +13,7 @@
     <header class="sticky top-0 z-50 border-b border-slate-200 bg-white" role="banner">
       <div class="mx-auto max-w-6xl px-4">
         <div class="relative flex h-14 items-center gap-3">
-          <a id="site-brand" class="flex min-w-0 items-center gap-3 transition-opacity duration-200" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr(get_bloginfo('name')); ?>">
+          <a id="site-brand" class="flex min-w-0 max-w-[16rem] items-center gap-3 transition-opacity duration-200 lg:max-w-[22rem]" href="<?php echo esc_url(home_url('/')); ?>" aria-label="<?php echo esc_attr(get_bloginfo('name')); ?>">
             <?php if (has_custom_logo()) : ?>
               <span class="shrink-0"><?php the_custom_logo(); ?></span>
             <?php else : ?>
@@ -27,12 +27,12 @@
               <span class="block truncate text-lg font-extrabold leading-tight tracking-tight text-slate-900 md:text-xl"><?php bloginfo('name'); ?></span>
               <?php $tagline = get_bloginfo('description', 'display'); ?>
               <?php if ($tagline) : ?>
-                <span class="block truncate text-xs font-medium leading-tight text-slate-500"><?php echo esc_html($tagline); ?></span>
+                <span class="hidden truncate text-xs font-medium leading-tight text-slate-500 xl:block"><?php echo esc_html($tagline); ?></span>
               <?php endif; ?>
             </span>
           </a>
 
-          <form class="hidden flex-1 items-center md:flex" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
+          <form class="hidden min-w-[22rem] flex-1 items-center md:flex" role="search" method="get" action="<?php echo esc_url(home_url('/')); ?>">
             <label class="sr-only" for="site-search">Search</label>
             <div class="flex w-full max-w-xl items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
               <input id="site-search" class="w-full bg-transparent text-sm outline-none placeholder:text-slate-400" type="search" name="s" value="<?php echo esc_attr(get_search_query()); ?>" placeholder="Search the web">
@@ -112,7 +112,7 @@
 
                 echo '<ul class="flex items-center gap-6">';
                 foreach ($primaryItems as $item) {
-                    echo '<li><a class="rounded-full px-3 py-2 font-semibold text-slate-700 no-underline transition-colors hover:bg-slate-100 hover:text-slate-900 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . '</a></li>';
+                    echo '<li class="min-w-0"><a class="inline-block max-w-[10rem] truncate rounded-full px-3 py-2 font-semibold text-slate-700 no-underline transition-colors hover:bg-slate-100 hover:text-slate-900 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-600 focus-visible:ring-offset-2" href="' . esc_url($item['url']) . '">' . esc_html($item['name']) . '</a></li>';
                 }
 
                 if ($moreItems !== []) {
@@ -176,34 +176,41 @@
           </div>
         </div>
 
-        <div id="trend-bar" class="flex w-full flex-col gap-2 overflow-hidden border-t border-slate-100 bg-white py-2 text-[11px] text-slate-600 transition-[max-height,opacity] duration-200 ease-out sm:text-xs md:flex-row md:items-center md:gap-4 md:text-sm md:duration-200 md:ease-out">
-          <span class="font-semibold text-slate-700">Today's news</span>
-          <nav class="min-w-0 flex-1" aria-label="Trending">
-            <?php
-            $trendTags = get_tags([
-                'orderby' => 'count',
-                'order' => 'DESC',
-                'hide_empty' => true,
-                'number' => 12,
-            ]);
+        <?php
+        $tz = function_exists('wp_timezone') ? wp_timezone() : null;
+        $now = $tz instanceof DateTimeZone ? new DateTimeImmutable('now', $tz) : new DateTimeImmutable('now');
+        $todayStart = $now->setTime(0, 0, 0);
+        $tomorrowStart = $todayStart->modify('+1 day');
 
-            if (is_array($trendTags) && $trendTags !== []) {
-                echo '<ul class="flex flex-wrap items-center gap-x-4 gap-y-2">';
-                foreach ($trendTags as $tag) {
-                    if (!$tag instanceof WP_Term) {
-                        continue;
-                    }
-                    $link = get_term_link($tag);
-                    if (!is_string($link) || $link === '') {
-                        continue;
-                    }
-                    echo '<li><a href="' . esc_url($link) . '">' . esc_html($tag->name) . '</a></li>';
-                }
-                echo '</ul>';
-            }
-            ?>
-          </nav>
-        </div>
+        $todayQuery = new WP_Query([
+            'post_type' => 'post',
+            'post_status' => 'publish',
+            'posts_per_page' => 3,
+            'ignore_sticky_posts' => true,
+            'no_found_rows' => true,
+            'date_query' => [
+                [
+                    'after' => $todayStart->format('Y-m-d H:i:s'),
+                    'before' => $tomorrowStart->format('Y-m-d H:i:s'),
+                    'inclusive' => true,
+                ],
+            ],
+        ]);
+        ?>
+
+        <?php if (!empty($todayQuery->posts)) : ?>
+          <div id="trend-bar" class="flex w-full flex-col gap-2 overflow-hidden border-t border-slate-100 bg-white py-2 text-[11px] text-slate-600 transition-[max-height,opacity] duration-200 ease-out sm:text-xs md:flex-row md:items-center md:gap-4 md:text-sm md:duration-200 md:ease-out">
+            <span class="font-semibold text-slate-700">Today's news</span>
+            <nav class="min-w-0 flex-1" aria-label="Trending">
+              <ul class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <?php foreach ($todayQuery->posts as $post) : ?>
+                  <?php if (!$post instanceof WP_Post) continue; ?>
+                  <li><a href="<?php echo esc_url(get_permalink($post)); ?>"><?php echo esc_html(get_the_title($post)); ?></a></li>
+                <?php endforeach; ?>
+              </ul>
+            </nav>
+          </div>
+        <?php endif; ?>
       </div>
     </header>
 
