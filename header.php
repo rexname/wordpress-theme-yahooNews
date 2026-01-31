@@ -7,9 +7,6 @@
   </head>
   <body <?php body_class('min-h-screen flex flex-col'); ?>>
     <?php wp_body_open(); ?>
-
-    <a class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-xl focus:border focus:border-slate-200 focus:bg-white focus:px-3 focus:py-2" href="#content">Skip to content</a>
-
     <header class="sticky top-0 z-50 border-b border-slate-200 bg-white" role="banner">
       <div class="mx-auto max-w-6xl px-4">
         <div class="relative flex h-14 items-center gap-3">

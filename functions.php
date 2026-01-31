@@ -463,6 +463,52 @@ function yahooNews_render_social_links(string $classRow = ''): void
     echo '</div>';
 }
 
+function yahooNews_unavailable_url(string $label = ''): string
+{
+    $url = add_query_arg('yahoonews_unavailable', '1', home_url('/'));
+    if ($label !== '') {
+        $url = add_query_arg('yahoonews_unavailable_label', $label, $url);
+    }
+
+    return $url;
+}
+
+function yahooNews_register_unavailable_query_vars(array $vars): array
+{
+    $vars[] = 'yahoonews_unavailable';
+    $vars[] = 'yahoonews_unavailable_label';
+    return $vars;
+}
+
+add_filter('query_vars', 'yahooNews_register_unavailable_query_vars');
+
+function yahooNews_render_unavailable_page(): void
+{
+    $flag = isset($_GET['yahoonews_unavailable']) ? (string) $_GET['yahoonews_unavailable'] : '';
+    if ($flag === '' || $flag === '0') {
+        return;
+    }
+
+    $label = isset($_GET['yahoonews_unavailable_label']) ? (string) $_GET['yahoonews_unavailable_label'] : '';
+    $label = sanitize_text_field($label);
+    if ($label !== '') {
+        set_query_var('yahoonews_unavailable_label', $label);
+    }
+
+    global $wp_query;
+    if ($wp_query instanceof WP_Query) {
+        $wp_query->set_404();
+    }
+
+    status_header(404);
+    nocache_headers();
+
+    include get_query_template('404');
+    exit;
+}
+
+add_action('template_redirect', 'yahooNews_render_unavailable_page');
+
 function yahooNews_render_footer_links(string $classSocial = '', string $classLinks = '', string $classCopyright = ''): void
 {
     $brandLabel = get_bloginfo('name');
@@ -470,17 +516,93 @@ function yahooNews_render_footer_links(string $classSocial = '', string $classLi
         $brandLabel = 'Brand';
     }
 
+    $resolvePageUrl = static function (array $paths, array $titles): string {
+        foreach ($paths as $path) {
+            if (!is_string($path) || $path === '') {
+                continue;
+            }
+
+            $page = get_page_by_path($path, OBJECT, 'page');
+            if (!$page instanceof WP_Post) {
+                continue;
+            }
+
+            if (!isset($page->post_status) || $page->post_status !== 'publish') {
+                continue;
+            }
+
+            $url = get_permalink($page);
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        foreach ($titles as $title) {
+            if (!is_string($title) || $title === '') {
+                continue;
+            }
+
+            $page = get_page_by_title($title, OBJECT, 'page');
+            if (!$page instanceof WP_Post) {
+                continue;
+            }
+
+            if (!isset($page->post_status) || $page->post_status !== 'publish') {
+                continue;
+            }
+
+            $url = get_permalink($page);
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        return '';
+    };
+
+    $links = [
+        [
+            'label' => 'About Us',
+            'paths' => ['about-us'],
+            'titles' => ['About Us'],
+        ],
+        [
+            'label' => 'Contact Us',
+            'paths' => ['contact-us', 'contact'],
+            'titles' => ['Contact Us', 'Contact'],
+        ],
+        [
+            'label' => 'Disclaimer',
+            'paths' => ['disclaimer'],
+            'titles' => ['Disclaimer'],
+        ],
+        [
+            'label' => 'Privacy Policy',
+            'paths' => ['privacy-policy', 'privacy-policy-2', 'privacy-policy-3'],
+            'titles' => ['Privacy Policy'],
+        ],
+        [
+            'label' => 'Terms of Service',
+            'paths' => ['terms-of-service', 'terms-of-service-2', 'terms-of-service-3'],
+            'titles' => ['Terms of Service'],
+        ],
+    ];
+
     echo '<div class="rounded-xl border border-slate-200 bg-white p-4">';
     yahooNews_render_social_links($classSocial);
     echo '<div class="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-slate-600 ' . esc_attr($classLinks) . '">';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Terms and Privacy Policy</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Privacy Dashboard</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Advertise</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">About Our Ads</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Careers</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Help</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Feedback</a>';
-    echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="#">Products and Services</a>';
+    foreach ($links as $link) {
+        $label = isset($link['label']) && is_string($link['label']) ? $link['label'] : '';
+        $paths = isset($link['paths']) && is_array($link['paths']) ? $link['paths'] : [];
+        $titles = isset($link['titles']) && is_array($link['titles']) ? $link['titles'] : [];
+        if ($label === '') {
+            continue;
+        }
+
+        $url = $resolvePageUrl($paths, $titles);
+        $href = $url !== '' ? $url : yahooNews_unavailable_url($label);
+        echo '<a class="no-underline hover:text-slate-900 hover:no-underline" href="' . esc_url($href) . '">' . esc_html($label) . '</a>';
+    }
     echo '</div>';
     echo '<p class="mt-4 text-xs text-slate-500 ' . esc_attr($classCopyright) . '">&copy; ' . esc_html((string) wp_date('Y')) . ' ' . esc_html($brandLabel) . '. All rights reserved.</p>';
     echo '</div>';
